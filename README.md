@@ -1,62 +1,90 @@
+# Cryptocurrency Price Prediction System
 
-You are tasked with providing probabilistic forecasts of a cryptocurrency's future price movements. Specifically, each you is required to generate multiple simulated price paths for an asset, from the current time over specified time increments and time horizon.
-you have to produce 1000 simulated paths for the future price of BTC, ETH, SOL, and XAU for the next 24 hours.
+A production-ready AI system for generating probabilistic price forecasts (1000 simulated paths) for cryptocurrencies (BTC, ETH, SOL, XAU) over a 24-hour horizon.
 
-We want their price paths to represent their view of the probability distribution of the future price, and we want their paths to encapsulate realistic price dynamics, such as volatility clustering and skewed fat tailed price change distributions. Subsequently we’ll expand to requesting forecasts for multiple assets, where modelling the correlations between the asset prices will be essential.
+## 🚀 Features
 
-The checking prompts sent to the you will have the format:
-(start_time, asset, time_increment, time_horizon, num_simulations)
+- **state-of-the-art AI Model**: Enhanced BiLSTM with Attention mechanisms (In Progress).
+- **Probabilistic Forecasting**: Generates 7 quantiles (P1-P99) to sample 1000 realistic price paths.
+- **Multi-Horizon**: Direct prediction of 288 time steps (24 hours at 5-min intervals).
+- **Robust Data Pipeline**: 
+    - Fetches real-time 5-min candles from **Binance API**.
+    - **Synthetic Data Fallback**: Automatically switches to geometric brownian motion simulation if API is unreachable.
+    - **Advanced Feature Engineering**: RSI, MACD, Bollinger Bands, Volatility, Cyclical Time encoding.
 
-Initially prompt parameters will always have the following values:
-
-- **Start Time ($t_0$)**: 1 minute from the time of the request.
-- **Asset**: BTC, ETH, XAU, SOL.
-- **Time Increment ($\Delta t$)**: 5 minutes.
-- **Time Horizon ($T$)**: 24 hours.
-- **Number of Simulations ($N_{\text{sim}}$)**: 1000.
-
-## Prediction Value Format
-
-The expected format for prediction responses is as follows:
+## 📂 Project Structure
 
 ```
-[
-  start_timestamp, time_interval,
-  [path1_price_t0, path1_price_t1, path1_price_t2, ...],
-  [path2_price_t0, path2_price_t1, path2_price_t2, ...],
-  ...
-]
+coin-prediction/
+├── prediction/
+│   ├── data/
+│   │   ├── data_fetcher.py          # Data collection (Binance + Synthetic)
+│   │   ├── feature_engineering.py   # Technical indicators
+│   │   └── data_processor.py        # Normalization & Sequence creation
+│   ├── models/                      # (Phase 2)
+│   └── visualization/               # (Phase 5)
+├── api/                             # (Phase 6)
+├── tests/                           # (Phase 7)
+└── requirements.txt
 ```
 
-An example of a valid response would be:
+## 🛠️ Setup & Installation
 
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/celvios/coin-prediction.git
+   cd coin-prediction
+   ```
+
+2. **Install Dependencies**
+   ```bash
+   pip install -r requirements.txt
+   # For GPU support (optional):
+   # pip install torch --index-url https://download.pytorch.org/whl/cu118
+   ```
+
+## 📊 Phase 1: Data Pipeline Usage
+
+Phase 1 (Completed) provides the foundational data infrastructure. You can use it to fetch and prepare data for model training.
+
+### 1. Fetching Data
+The `DataFetcher` automatically handles API rate limits and switches to synthetic data if needed.
+
+```python
+from prediction.data.data_fetcher import BinanceDataFetcher
+
+fetcher = BinanceDataFetcher()
+# Fetch last 1000 5-min candles for BTC
+df = fetcher.fetch_historical_data("BTC", limit=1000)
+print(df.tail())
 ```
-[
-  1760084861, 300,
-  [104856.23, 104972.01, 105354.9, ...],
-  [104856.23, 104724.54, 104886, ...],
-  [104856.23, 104900.12, 104950.45, ...]
-  ...
-]
+
+### 2. Processing Data for Training
+The `DataProcessor` handles the full pipeline: Fetch -> Feature Engineer -> Normalize -> Sequence.
+
+```python
+from prediction.data.data_processor import DataProcessor
+
+# Prepare data for BTC (24h sequence length, 24h prediction horizon)
+processor = DataProcessor(asset="BTC", sequence_length=288, prediction_horizon=288)
+
+# Returns PyTorch tensors ready for training
+X_train, y_train, X_val, y_val = processor.prepare_data(limit=5000)
+
+print(f"Training Data Shape: {X_train.shape}") 
+# Output: (Batch_Size, 288, Num_Features)
 ```
 
-Where:
+## 📅 Roadmap
 
-- The **first element** is the timestamp of the start time of the prompt
-- The **second element** is the time increment of the prompt (in seconds)
-- The **remaining elements** are arrays of prices for each simulated path
+- [x] **Phase 1: Data Pipeline** (Completed) - Real & Synthetic data, Feature Engineering.
+- [ ] **Phase 2: Model Development** - Enhanced BiLSTM architecture.
+- [ ] **Phase 3: Path Generation** - Probabilistic sampling.
+- [ ] **Phase 4: Multi-Asset** - Correlation modeling.
+- [ ] **Phase 5: Visualization** - Interactive dashboard.
+- [ ] **Phase 6: API Layer** - FastAPI service.
+- [ ] **Phase 7: Testing** - Unit & Backtesting.
 
-### Important Formatting Requirements
+## 🤝 Contributing
 
-- **Price Precision**: Each price point must have **no more than 8 digits** total (including digits before and after the decimal point)
-
-Make sure to round your price values appropriately to comply with this constraint.
-
-## Visualization Requirement
-
-The system must display a **prediction chart for each coin** (BTC, ETH, SOL, XAU) showing:
-- All simulated price paths
-- Historical price data leading up to the prediction start time
-- Time progression over the 24-hour forecast horizon
-
-This visualization helps validate the quality and distribution of the generated predictions.
+This project is a private development for AI-driven financial forecasting.
